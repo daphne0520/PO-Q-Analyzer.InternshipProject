@@ -29,4 +29,11 @@ PO / Q Input
 → AI Comparison Engine (Python)  
 → Validation Output & Dashboard  (V-One)
 
+# Key KPIs
+1. Detect differences between purchase orders and quotation.
+2. Maintain comparison result accuracy >=98%
+3. Reduce the process verification time in 80%.
+4. Live dashboard that shows analysis on purchase orders received and quotations given.
+5. 0 duplicated file integrated during the verification process.
+
 # Future Improvement
