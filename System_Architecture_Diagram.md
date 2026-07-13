@@ -1,3 +1,4 @@
+```mermaid
 flowchart TB
     classDef portal fill:#DCE6F1,stroke:#1F3864,stroke-width:1px,color:#1a1a1a;
     classDef logic fill:#DCEEEE,stroke:#2E8B8B,stroke-width:1px,color:#1a1a1a;
