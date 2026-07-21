@@ -6,9 +6,13 @@ This project was inspired during my internship at ViTrox. I observed that the pu
 
 # Objective
 -Automate purchase order and quotation verification
+
 -Centralize document management and workflow tracking
+
 -Reduce manual validation errors
+
 -Improve data consistency and traceability
+
 -Provide real-time operational insights through dashboards
 
 # Dataset
