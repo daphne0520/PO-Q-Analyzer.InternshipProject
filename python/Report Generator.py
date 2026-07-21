@@ -24,9 +24,6 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
-# ------------------------------------------------------------------
-# 1. Read input parameters with backward compatibility
-# ------------------------------------------------------------------
 def get_input_value(name):
     val = globals().get(name, None)
     if val is not None:
@@ -38,33 +35,6 @@ def get_input_value(name):
     return None
 
 
-# Configure the following input ports for this Python node:
-#
-# ticket_record_id
-#     -> The ticket-record-id of the current triggered ticket.
-#
-# comparison_record
-#     -> Query the po_comparison_results table using ticket_record_id
-#        and retrieve the first matching record.
-#
-# existing_reports
-#     -> Query all records from the po_reports table.
-#        Used for determining the report version.
-#
-# final_buyer_company
-# final_seller_company
-# final_delivery_address
-# final_unit_price
-# final_total_amount
-# final_date
-# final_quantity
-# final_description
-# final_discount
-# final_tax
-# reviewer_name
-#
-#     -> Final values entered by the reviewer during the Manual Review stage.
-
 ticket_record_id = get_input_value("ticket_record_id") or ""
 comparison_record = get_input_value("comparison_record") or {}
 existing_reports = get_input_value("existing_reports") or []
@@ -75,7 +45,6 @@ final_delivery_address = get_input_value("final_delivery_address")
 final_unit_price = get_input_value("final_unit_price")
 final_total_amount = get_input_value("final_total_amount")
 
-# Final reviewer-confirmed values for the newly added fields
 final_date = get_input_value("final_date")
 final_quantity = get_input_value("final_quantity")
 final_description = get_input_value("final_description")
@@ -85,13 +54,17 @@ final_tax = get_input_value("final_tax")
 reviewer_name = get_input_value("reviewer_name") or ""
 
 
-# ------------------------------------------------------------------
-# 2. Override the original comparison record with reviewer-confirmed
-#    values and generate the updated comparison result.
-# ------------------------------------------------------------------
 def build_updated_record(original, overrides):
-    # Create a copy to preserve the original record
     updated = dict(original)
+
+    # Bridge field-name gap with the comparison engine: it outputs
+    # po_amount/q_amount, not po_total_amount/q_total_amount, and never
+    # outputs seller company or unit price at all. Carry over whatever the
+    # comparison engine actually gave us before applying reviewer overrides,
+    # so the report doesn't render blank rows for fields nobody typed in.
+    if "po_total_amount" not in updated and "po_amount" in updated:
+        updated["po_total_amount"] = updated["po_amount"]
+        updated["q_total_amount"] = updated.get("q_amount")
 
     if overrides.get("final_buyer_company"):
         updated["po_buyer_company"] = overrides["final_buyer_company"]
@@ -118,7 +91,6 @@ def build_updated_record(original, overrides):
         updated["q_total_amount"] = overrides["final_total_amount"]
         updated["total_amount_match"] = True
 
-    # Override the newly added fields
     if overrides.get("final_date"):
         updated["po_date"] = overrides["final_date"]
         updated["q_date"] = overrides["final_date"]
@@ -145,6 +117,7 @@ def build_updated_record(original, overrides):
         updated["q_tax"] = overrides["final_tax"]
         updated["tax_match"] = True
 
+    updated["is_match"] = 1
     updated["status_text"] = "Success"
     updated["reviewed_by"] = overrides.get("reviewer_name", "")
     updated["reviewed_at"] = datetime.now().isoformat()
@@ -175,11 +148,6 @@ overrides = {
 updated_comparison_record = build_updated_record(comparison_record, overrides)
 
 
-# ------------------------------------------------------------------
-# 3. Generate the report ID.
-#    Existing reports reuse the original ID with version suffixes
-#    (_V1, _V2, ...). New tickets receive a new report ID.
-# ------------------------------------------------------------------
 def generate_report_id(ticket_record_id, existing_reports):
     same_ticket = [
         r for r in existing_reports
@@ -213,9 +181,6 @@ report_id, report_version = generate_report_id(
 )
 
 
-# ------------------------------------------------------------------
-# 4. Generate the reviewed PDF report.
-# ------------------------------------------------------------------
 def generate_pdf_report(data: dict) -> str:
     buf = io.BytesIO()
 
@@ -384,10 +349,7 @@ try:
     file_name = f"{report_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
     output = {
-        # Used by the "Update Record" node (po_comparison_results)
         "updated_comparison_record": updated_comparison_record,
-
-        # Used by the "Create Table Record" node (po_reports)
         "report_id": report_id,
         "ticket_record_id": ticket_record_id,
         "report_file_base64": pdf_base64,
