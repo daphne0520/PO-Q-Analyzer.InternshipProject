@@ -1,0 +1,20 @@
+# --- 1. Read input parameters with backward compatibility ---
+def get_input_value(name):
+    ...
+
+# The following input parameters should be added to the Input Port of this Python node:
+#   ticket_record_id
+#       <- ticket-record-id of the current triggered ticket
+#
+#   comparison_record
+#       <- Query the po_comparison_results table (filtered by ticket_record_id)
+#          and retrieve the first record
+#
+#   existing_reports
+#       <- Query all records from the po_reports table
+#          (used to determine the report version number)
+#
+#   final_buyer_company / final_seller_company / final_delivery_address /
+#   final_unit_price / final_total_amount / final_date / final_quantity /
+#   final_description / final_discount / final_tax / reviewer_name
+#       <- Final values entered by the reviewer during the Manual Review stage
