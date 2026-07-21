@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wireframe — Approval Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wireframe.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/rough.js/2.1.1/rough.umd.min.js"></script>
+</head>
+<body>
+
+<div class="wf-topbar">
+  <span class="wf-tag">Low-Fi Wireframes</span>
+  <div>
+    <a href="index.html">Overview</a>
+    <a href="approval-portal.html" class="active">Approval Portal</a>
+    <a href="verification-portal.html">Verification Portal</a>
+    <a href="executive-dashboard.html">Executive Dashboard</a>
+  </div>
+</div>
+
+<div class="wf-canvas">
+  <div class="wf-screen-label">Screen — Approval Portal</div>
+
+  <div class="wf-header">HEADER (HTML)</div>
+
+  <div class="wf-box" style="margin-bottom:14px;">
+    <span class="wf-label">Title</span>
+    <div class="wf-row" style="margin-top:6px;">
+      <div class="wf-input wf-grow">Search input</div>
+      <div class="wf-btn">Button</div>
+    </div>
+  </div>
+
+  <div class="wf-row">
+    <!-- Left: report review -->
+    <div class="wf-box wf-grow" style="min-height:280px;">
+      <span class="wf-label">HTML — Report Review</span>
+      <div class="wf-placeholder-lines" style="margin-top:14px;">
+        <span></span><span></span><span></span><span></span>
+        <span style="width:70%"></span><span style="width:88%"></span>
+        <span style="width:50%"></span>
+      </div>
+    </div>
+
+    <!-- Right: approval card + actions -->
+    <div class="wf-col" style="width:280px;">
+      <div class="wf-box">
+        <span class="wf-label">Awaiting Approval Card</span>
+        <div style="margin-top:10px; font-size:12.5px; color:var(--wf-text-muted);">List: Report ID</div>
+        <div class="wf-list-item"><span>RPT-1042</span><span>›</span></div>
+        <div class="wf-list-item"><span>RPT-1043</span><span>›</span></div>
+        <div class="wf-list-item"><span>RPT-1044</span><span>›</span></div>
+      </div>
+
+      <div class="wf-box" style="display:flex; flex-direction:column; gap:10px;">
+        <div class="wf-btn" id="btn-approve">Approve</div>
+        <div class="wf-btn ghost" id="btn-amend">Require Amendment</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialogs -->
+  <div class="wf-arrow-note">↓ triggered by action buttons above ↓</div>
+  <div class="wf-dialog-wrap">
+    <div class="wf-dialog">
+      <div class="wf-dialog-title">Dialog 1 — on "Approve"</div>
+      <div style="font-size:13px; margin-bottom:14px;">Report status updated!</div>
+      <div class="wf-btn ghost" style="width:100%;">Download Report</div>
+    </div>
+
+    <div class="wf-dialog">
+      <div class="wf-dialog-title">Dialog 2 — on "Require Amendment"</div>
+      <div class="wf-input" style="margin-bottom:10px;">Message (input)</div>
+      <div style="font-size:12px; color:var(--wf-text-muted); margin-bottom:6px;">Issued by: <em>[dropdown]</em></div>
+      <div class="wf-input" style="margin-bottom:10px;">Select issuer ▾</div>
+      <div style="font-size:12px; color:var(--wf-text-muted); margin-bottom:6px;">Report ID: <em>[auto-filled]</em></div>
+      <div class="wf-input" style="margin-bottom:14px; color:var(--wf-text-muted);">RPT-1042</div>
+      <div class="wf-row">
+        <div class="wf-btn wf-grow">Confirm</div>
+        <div class="wf-btn ghost wf-grow">Cancel</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-flow">
+    <strong>Flow / logic notes</strong>
+    <ul>
+      <li>On <code>Confirm</code> (Dialog 2) → send <code>email notification</code></li>
+      <li>On <code>Confirm</code> (Dialog 2) → navigate to <code>Executive Dashboard</code></li>
+      <li><code>Approve</code> opens Dialog 1; <code>Require Amendment</code> opens Dialog 2</li>
+    </ul>
+  </div>
+</div>
+
+<script src="sketch.js"></script>
+</body>
+</html>
