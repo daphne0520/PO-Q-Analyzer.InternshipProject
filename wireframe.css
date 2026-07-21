@@ -1,0 +1,227 @@
+/* ==========================================================
+   Hand-Drawn Sketch Wireframe Kit
+   Notebook-paper background + rough.js hand-drawn boxes.
+   Requires: Google Font "Kalam" + rough.js (linked in each HTML head)
+   and sketch.js (rough.js render script, at end of body).
+   ========================================================== */
+
+:root{
+  --wf-bg: #f5f1e6;
+  --wf-paper-line: #dcd6c4;
+  --wf-margin-line: #e3a3a3;
+  --wf-line: #6b6b6b;
+  --wf-line-dark: #3a3a3a;
+  --wf-fill: #fffdf6;
+  --wf-fill-muted: #f1efe4;
+  --wf-fill-strong: #e2ded0;
+  --wf-text: #33322c;
+  --wf-text-muted: #7a7768;
+  --wf-radius: 2px;
+  font-family: 'Kalam', 'Comic Sans MS', cursive;
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  margin:0;
+  background:
+    repeating-linear-gradient(
+      var(--wf-bg) 0px, var(--wf-bg) 31px,
+      var(--wf-paper-line) 32px
+    );
+  color: var(--wf-text);
+  font-family: 'Kalam', 'Comic Sans MS', cursive;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* page chrome for browsing the set on GitHub Pages */
+.wf-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 20px;
+  background: var(--wf-fill-strong);
+  border-bottom:1px solid var(--wf-line);
+  font-size:13px;
+  letter-spacing:.03em;
+  color: var(--wf-text-muted);
+}
+.wf-topbar a{
+  color: var(--wf-text);
+  text-decoration:none;
+  margin-left:14px;
+  padding:5px 12px;
+  position:relative;
+  background: transparent;
+}
+.wf-topbar a.active{ font-weight:bold; }
+.wf-topbar .wf-tag{ font-weight:bold; color:var(--wf-text); font-size:15px; }
+
+.wf-canvas{
+  max-width: 1100px;
+  margin: 30px auto 80px;
+  padding: 0 20px 0 60px;
+  position: relative;
+}
+
+/* red notebook margin line down the left of the page */
+.wf-canvas::before{
+  content:"";
+  position:absolute;
+  top:-20px; bottom:-40px;
+  left:36px;
+  width:0;
+  border-left:2px solid var(--wf-margin-line);
+  opacity:.55;
+}
+
+.wf-screen-label{
+  font-size:14px;
+  color: var(--wf-text-muted);
+  margin-bottom:10px;
+  transform: rotate(-0.4deg);
+}
+
+/* generic wireframe box — border is drawn by rough.js (sketch.js), keep transparent here */
+.wf-box{
+  background: transparent;
+  position: relative;
+  padding: 16px;
+}
+.wf-box.muted{ background: transparent; }
+
+/* small caption label sitting on the top-left of a box, like a margin note */
+.wf-label{
+  position:absolute;
+  top:-13px;
+  left:14px;
+  background: var(--wf-bg);
+  padding:0 6px;
+  font-size:13px;
+  color: var(--wf-text-muted);
+  z-index: 2;
+  transform: rotate(-1deg);
+}
+
+.wf-header{
+  background: transparent;
+  text-align:center;
+  padding:16px;
+  font-weight:bold;
+  font-size:17px;
+  letter-spacing:.03em;
+  margin-bottom:16px;
+  position:relative;
+}
+
+.wf-row{ display:flex; gap:16px; }
+.wf-col{ display:flex; flex-direction:column; gap:16px; }
+.wf-grow{ flex:1; }
+
+.wf-input{
+  background: transparent;
+  padding:10px 14px;
+  color: var(--wf-text-muted);
+  font-size:14px;
+  position:relative;
+}
+
+.wf-btn{
+  background: transparent;
+  padding:10px 18px;
+  text-align:center;
+  font-size:14px;
+  font-weight:bold;
+  cursor:default;
+  user-select:none;
+  white-space:nowrap;
+  position:relative;
+}
+.wf-btn.ghost{ font-weight:normal; }
+
+.wf-placeholder-lines{
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  padding:12px 6px;
+}
+.wf-placeholder-lines span{
+  display:block;
+  height:2px;
+  background: var(--wf-text-muted);
+  opacity:.55;
+  border-radius: 40% 60% 55% 45%/50% 40% 60% 50%;
+}
+.wf-placeholder-lines span:nth-child(1){ width:92%; transform: rotate(-.4deg); }
+.wf-placeholder-lines span:nth-child(2){ width:78%; transform: rotate(.3deg); }
+.wf-placeholder-lines span:nth-child(3){ width:85%; transform: rotate(-.2deg); }
+.wf-placeholder-lines span:nth-child(4){ width:60%; transform: rotate(.4deg); }
+
+.wf-card{
+  background: transparent;
+  padding:16px;
+  text-align:center;
+  font-size:14px;
+  position:relative;
+}
+.wf-card .wf-count{
+  font-size:22px;
+  font-weight:bold;
+  margin:6px 0;
+  color: var(--wf-text-muted);
+}
+
+.wf-list-item{
+  padding:9px 6px;
+  font-size:14px;
+  display:flex;
+  justify-content:space-between;
+  color: var(--wf-text-muted);
+  border-bottom: 1px solid var(--wf-paper-line);
+}
+.wf-list-item:last-child{ border-bottom:none; }
+
+/* annotation arrows / flow notes below a screen */
+.wf-flow{
+  margin-top:20px;
+  padding-top:14px;
+  font-size:14px;
+  color: var(--wf-text-muted);
+  border-top: 1px solid var(--wf-paper-line);
+}
+.wf-flow li{ margin-bottom:7px; }
+.wf-flow code{
+  padding:1px 6px;
+  color: var(--wf-text);
+  font-weight:bold;
+  border-bottom: 2px solid var(--wf-margin-line);
+}
+
+/* modal / dialog overlay simulation, shown inline side-by-side for wireframe docs */
+.wf-dialog-wrap{
+  margin-top:26px;
+  display:flex;
+  gap:24px;
+  flex-wrap:wrap;
+}
+.wf-dialog{
+  flex:1;
+  min-width:280px;
+  background: transparent;
+  padding:16px;
+  position:relative;
+}
+.wf-dialog-title{
+  font-size:14px;
+  color: var(--wf-text-muted);
+  margin-bottom:12px;
+  padding-bottom:9px;
+  border-bottom: 1px solid var(--wf-paper-line);
+}
+
+.wf-arrow-note{
+  text-align:center;
+  font-size:14px;
+  color:var(--wf-text-muted);
+  margin:12px 0;
+}

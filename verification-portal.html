@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wireframe — Verification Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wireframe.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/rough.js/2.1.1/rough.umd.min.js"></script>
+</head>
+<body>
+
+<div class="wf-topbar">
+  <span class="wf-tag">Low-Fi Wireframes</span>
+  <div>
+    <a href="index.html">Overview</a>
+    <a href="approval-portal.html">Approval Portal</a>
+    <a href="verification-portal.html" class="active">Verification Portal</a>
+    <a href="executive-dashboard.html">Executive Dashboard</a>
+  </div>
+</div>
+
+<div class="wf-canvas">
+  <div class="wf-screen-label">Screen — Verification Portal</div>
+
+  <div class="wf-header">AI PROCESSOR</div>
+
+  <div class="wf-box" style="min-height:260px;">
+    <span class="wf-label">AI Comparison Result &nbsp;(source: table — po-comparison-results)</span>
+    <div class="wf-placeholder-lines" style="margin-top:14px;">
+      <span></span><span></span><span style="width:65%"></span>
+      <span></span><span style="width:80%"></span><span style="width:40%"></span>
+    </div>
+  </div>
+
+  <div class="wf-row" style="margin-top:14px;">
+    <div class="wf-btn wf-grow" id="btn-amendment">Amendment</div>
+    <div class="wf-btn wf-grow" id="btn-generated">Generated AI Report</div>
+  </div>
+
+  <div class="wf-arrow-note">↓ triggered by action buttons above ↓</div>
+  <div class="wf-dialog-wrap">
+    <div class="wf-dialog">
+      <div class="wf-dialog-title">Dialog — on "Amendment"</div>
+      <div style="font-size:12px; color:var(--wf-text-muted); margin-bottom:8px;">Form layout widgets</div>
+      <div class="wf-input" style="margin-bottom:8px;">Field</div>
+      <div class="wf-input" style="margin-bottom:8px;">Field</div>
+      <div class="wf-input" style="margin-bottom:14px;">Field</div>
+      <div style="font-size:11.5px; color:var(--wf-text-muted); margin-bottom:12px;">Action required: <strong>Edit</strong></div>
+      <div class="wf-row">
+        <div class="wf-btn wf-grow">Update</div>
+        <div class="wf-btn ghost wf-grow">Cancel</div>
+      </div>
+    </div>
+
+    <div class="wf-dialog">
+      <div class="wf-dialog-title">Dialog 2 — on "Generated AI Report"</div>
+      <div class="wf-box muted" style="min-height:120px; margin-bottom:14px;">
+        <span class="wf-label">HTML — AI Report Preview</span>
+        <div class="wf-placeholder-lines" style="margin-top:14px;">
+          <span></span><span style="width:70%"></span><span style="width:55%"></span>
+        </div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-btn wf-grow">Submit</div>
+        <div class="wf-btn ghost wf-grow">Cancel</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-flow">
+    <strong>Flow / logic notes</strong>
+    <ul>
+      <li><code>Amendment</code> → opens edit-form Dialog → <code>Update</code> returns to AI Processor result</li>
+      <li><code>Generated AI Report</code> → opens preview Dialog → <code>Submit</code> confirms</li>
+      <li>On <code>Submit</code> → navigate to <code>Executive Dashboard</code></li>
+      <li>On <code>Submit</code> → update table record: <code>po-reports</code></li>
+    </ul>
+  </div>
+</div>
+
+<script src="sketch.js"></script>
+</body>
+</html>

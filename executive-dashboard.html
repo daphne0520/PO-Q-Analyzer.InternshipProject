@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wireframe — Executive Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wireframe.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/rough.js/2.1.1/rough.umd.min.js"></script>
+</head>
+<body>
+
+<div class="wf-topbar">
+  <span class="wf-tag">Low-Fi Wireframes</span>
+  <div>
+    <a href="index.html">Overview</a>
+    <a href="approval-portal.html">Approval Portal</a>
+    <a href="verification-portal.html">Verification Portal</a>
+    <a href="executive-dashboard.html" class="active">Executive Dashboard</a>
+  </div>
+</div>
+
+<div class="wf-canvas">
+  <div class="wf-screen-label">Screen — Executive Dashboard</div>
+
+  <div class="wf-header">HEADER</div>
+
+  <div class="wf-row" style="margin-bottom:14px;">
+    <div class="wf-card wf-grow">
+      <div>Awaiting Verify</div>
+      <div class="wf-count">Card 1</div>
+    </div>
+    <div class="wf-card wf-grow">
+      <div>Awaiting Approval</div>
+      <div class="wf-count">Card 2</div>
+    </div>
+    <div class="wf-card wf-grow">
+      <div>AI Report Issued</div>
+      <div class="wf-count">Card 3</div>
+    </div>
+    <div class="wf-card wf-grow" style="border-style:solid;">
+      <div>+</div>
+      <div style="margin-top:6px; font-weight:bold;">Create Report</div>
+    </div>
+  </div>
+
+  <div class="wf-box" style="margin-bottom:10px;">
+    <span class="wf-label">Search report ID</span>
+    <div class="wf-input" style="margin-top:6px;">Search report ID…</div>
+  </div>
+
+  <div class="wf-box" style="min-height:260px;">
+    <span class="wf-label">Preview — report selected (PDF)</span>
+    <div class="wf-placeholder-lines" style="margin-top:14px;">
+      <span></span><span></span><span style="width:60%"></span>
+      <span></span><span style="width:75%"></span><span style="width:45%"></span>
+    </div>
+  </div>
+
+  <div class="wf-row" style="margin-top:14px;">
+    <div class="wf-btn wf-grow">Amendment</div>
+    <div class="wf-btn ghost wf-grow">Download</div>
+  </div>
+
+  <div class="wf-flow">
+    <strong>Flow / logic notes</strong>
+    <ul>
+      <li><code>Amendment</code> → navigate to <code>Verification Portal</code></li>
+      <li>Additional report action → generate AI report → update table record: <code>po-reports</code></li>
+      <li>Cards 1–3 filter/jump into the relevant queue (Verify / Approval / AI-issued)</li>
+    </ul>
+  </div>
+</div>
+
+<script src="sketch.js"></script>
+</body>
+</html>

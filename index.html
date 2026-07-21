@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wireframes — Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wireframe.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/rough.js/2.1.1/rough.umd.min.js"></script>
+</head>
+<body>
+
+<div class="wf-topbar">
+  <span class="wf-tag">Low-Fi Wireframes</span>
+  <div>
+    <a href="index.html" class="active">Overview</a>
+    <a href="approval-portal.html">Approval Portal</a>
+    <a href="verification-portal.html">Verification Portal</a>
+    <a href="executive-dashboard.html">Executive Dashboard</a>
+  </div>
+</div>
+
+<div class="wf-canvas">
+  <div class="wf-screen-label">Project Flow — Overview</div>
+  <div class="wf-header" style="font-weight:normal; text-transform:none; letter-spacing:normal;">
+    Report Approval &amp; Verification System — Low-Fidelity Wireframe Set
+  </div>
+
+  <div class="wf-row" style="align-items:stretch;">
+    <a href="approval-portal.html" style="text-decoration:none; color:inherit;" class="wf-box wf-grow">
+      <span class="wf-label">01</span>
+      <div style="font-weight:bold; margin-bottom:8px;">Approval Portal</div>
+      <div style="font-size:12px; color:var(--wf-text-muted);">
+        Search &amp; review reports. Approve or Require Amendment. Confirms email notification and moves to Executive Dashboard.
+      </div>
+    </a>
+    <a href="verification-portal.html" style="text-decoration:none; color:inherit;" class="wf-box wf-grow">
+      <span class="wf-label">02</span>
+      <div style="font-weight:bold; margin-bottom:8px;">Verification Portal</div>
+      <div style="font-size:12px; color:var(--wf-text-muted);">
+        AI Processor compares PO data. Amend or generate/preview AI report, then submit — updates the po-reports table.
+      </div>
+    </a>
+    <a href="executive-dashboard.html" style="text-decoration:none; color:inherit;" class="wf-box wf-grow">
+      <span class="wf-label">03</span>
+      <div style="font-weight:bold; margin-bottom:8px;">Executive Dashboard</div>
+      <div style="font-size:12px; color:var(--wf-text-muted);">
+        Overview cards (Awaiting Verify / Approval / AI Issued), search &amp; preview a report, download or send for amendment.
+      </div>
+    </a>
+  </div>
+
+  <div class="wf-flow">
+    <strong>End-to-end flow</strong>
+    <ul>
+      <li><code>Executive Dashboard</code> → select report → <code>Verification Portal</code></li>
+      <li><code>Verification Portal</code> → AI comparison → Amend or Generate AI Report → submit → back to <code>Executive Dashboard</code></li>
+      <li><code>Executive Dashboard</code> / queue → <code>Approval Portal</code> → Approve or Require Amendment → email notification → <code>Executive Dashboard</code></li>
+    </ul>
+  </div>
+</div>
+
+<script src="sketch.js"></script>
+</body>
+</html>
