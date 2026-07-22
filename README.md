@@ -36,3 +36,5 @@ Developed interactive dashboards to monitor purchase order activities, compariso
 5. 0 duplicated file integrated during the verification process.
 
 # Future Improvement
+
+//This GitHub covers my BI/database projects. For my full analytics portfolio (SAS, Python optimization, simulation modelling), please refer to (https://enqi020520.wixsite.com/my-site-4).
