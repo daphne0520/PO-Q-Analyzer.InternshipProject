@@ -4,6 +4,17 @@ import base64
 import io
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# All timestamps in this report (reviewed_at, Generated line, output
+# filename, generated_at) are in Malaysia time, regardless of the time
+# zone the server executing this script happens to be set to.
+MY_TZ = ZoneInfo("Asia/Kuala_Lumpur")
+
+
+def now_my():
+    return datetime.now(MY_TZ)
+
 
 try:
     import reportlab
@@ -120,11 +131,11 @@ def build_updated_record(original, overrides):
     updated["is_match"] = 1
     updated["status_text"] = "Success"
     updated["reviewed_by"] = overrides.get("reviewer_name", "")
-    updated["reviewed_at"] = datetime.now().isoformat()
+    updated["reviewed_at"] = now_my().isoformat()
 
     updated["ai_recommendation"] = (
         f"Reviewed and confirmed by {overrides.get('reviewer_name', '')} on "
-        f"{datetime.now().strftime('%Y-%m-%d %H:%M')}. "
+        f"{now_my().strftime('%Y-%m-%d %H:%M')}. "
         f"All fields verified correct."
     )
 
@@ -245,7 +256,7 @@ def generate_pdf_report(data: dict) -> str:
 
     story.append(
         Paragraph(
-            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')} | Report ID: {report_id}",
+            f"Generated: {now_my().strftime('%Y-%m-%d %H:%M')} (Malaysia Time, UTC+8) | Report ID: {report_id}",
             sub_style,
         )
     )
@@ -293,18 +304,52 @@ def generate_pdf_report(data: dict) -> str:
 
     story.append(Paragraph("Final Confirmed Details", section_style))
 
+    def format_discount(val):
+        # Always display as a percentage, however the value was stored
+        # (comparison engine and reviewer overrides may both hand us a
+        # plain percent number like 20, or a fraction like 0.2).
+        if val is None or val == "":
+            return ""
+        try:
+            num = float(val)
+        except (TypeError, ValueError):
+            return str(val)
+        if -1 <= num <= 1 and num != 0:
+            num *= 100
+        return f"{num:g}%"
+
+    cell_style = ParagraphStyle(
+        "cell",
+        parent=normal,
+        fontSize=9,
+        leading=12,
+    )
+
+    def cell(value):
+        # Wrap every value in a Paragraph so long text (address,
+        # description) wraps inside the column instead of overflowing
+        # past the table border.
+        return Paragraph(str(value) if value is not None else "", cell_style)
+
+    header_style = ParagraphStyle(
+        "cellHeader",
+        parent=cell_style,
+        textColor=brand_dark,
+        fontName="Helvetica-Bold",
+    )
+
     rows = [
-        ["Field", "Confirmed Value"],
-        ["Buyer company", str(data.get("po_buyer_company", ""))],
-        ["Seller company", str(data.get("po_seller_company", ""))],
-        ["Delivery address", str(data.get("po_delivery_address", ""))],
-        ["Date", str(data.get("po_date", ""))],
-        ["Quantity", str(data.get("po_quantity", ""))],
-        ["Description", str(data.get("po_description", ""))],
-        ["Unit price", str(data.get("po_unit_price", ""))],
-        ["Discount", str(data.get("po_discount", ""))],
-        ["Tax", str(data.get("po_tax", ""))],
-        ["Total amount", str(data.get("po_total_amount", ""))],
+        [Paragraph("Field", header_style), Paragraph("Confirmed Value", header_style)],
+        [cell("Buyer company"), cell(data.get("po_buyer_company", ""))],
+        [cell("Seller company"), cell(data.get("po_seller_company", ""))],
+        [cell("Delivery address"), cell(data.get("po_delivery_address", ""))],
+        [cell("Date"), cell(data.get("po_date", ""))],
+        [cell("Quantity"), cell(data.get("po_quantity", ""))],
+        [cell("Description"), cell(data.get("po_description", ""))],
+        [cell("Unit price"), cell(data.get("po_unit_price", ""))],
+        [cell("Discount"), cell(format_discount(data.get("po_discount")))],
+        [cell("Tax"), cell(data.get("po_tax", ""))],
+        [cell("Total amount"), cell(data.get("po_total_amount", ""))],
     ]
 
     t = Table(rows, colWidths=[50 * mm, 122 * mm])
@@ -346,7 +391,7 @@ def generate_pdf_report(data: dict) -> str:
 try:
     pdf_base64, pdf_size = generate_pdf_report(updated_comparison_record)
 
-    file_name = f"{report_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    file_name = f"{report_id}_{now_my().strftime('%Y%m%d_%H%M%S')}.pdf"
 
     output = {
         "updated_comparison_record": updated_comparison_record,
@@ -357,7 +402,7 @@ try:
         "report_version": report_version,
         "status_text": "Success",
         "is_reviewed": True,
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": now_my().isoformat(),
         "report_generated": True,
     }
 
@@ -371,7 +416,7 @@ except Exception as e:
         "report_version": report_version,
         "status_text": "Success",
         "is_reviewed": True,
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": now_my().isoformat(),
         "report_generated": False,
         "error": str(e),
     }
