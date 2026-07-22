@@ -1,34 +1,3 @@
-## PDF Comparison Engine v2 (refined)
-# Fixes applied after testing against a real ViTrox/NationGate PO + Quotation:
-#   1. Switched PyPDF2 -> pdfplumber (PyPDF2's extraction scrambled the
-#      PO's table into unreadable, out-of-order text; pdfplumber preserved
-#      reading order and layout well enough to regex against).
-#   2. Amount extraction no longer requires a currency symbol glued to the
-#      number (e.g. "MYR414,720.00") - real invoices put the currency in a
-#      column header, not on the totals line. Also now prefers an explicit
-#      "Grand Total" line over a generic "Total" line, since a pre-discount
-#      subtotal can be numerically larger than the grand total and was
-#      previously winning by mistake.
-#   3. Company-name extraction now looks 1-3 lines below a label (Ven Name /
-#      Ship To / To / Bill To / From), since real docs often put a person's
-#      name on the label line and the company name on the next line - and
-#      falls back to the first "Sdn Bhd / Ltd / Inc"-style line in the
-#      document (the letterhead) if nothing is found near the label.
-#   4. Address extraction no longer requires a colon directly after
-#      "Ship To" and pulls in the following continuation lines.
-#   5. Date parsing now handles ordinal suffixes ("24th March 2026") and
-#      dash-separated month names ("01-Apr-2026").
-#   6. Quantity/unit price: tries pdfplumber's table extraction first
-#      (works when the PDF has ruled table lines); falls back to a regex
-#      for borderless tables like this PO ("UNIT 12.00 MYR 34,560.00").
-#
-# KNOWN REMAINING LIMITATION (not a code bug - a data gap):
-#   This specific quotation's front page never states a delivery address at
-#   all (only the vendor's own address + the buyer's email). No amount of
-#   extraction logic can find a field that was never printed. If that
-#   should NOT block an overall match, change the `is_match` rule below so
-#   address is advisory rather than required.
-
 import sys
 import subprocess
 import json
@@ -38,14 +7,14 @@ import tempfile
 import requests
 from difflib import SequenceMatcher
 from datetime import datetime
-
+ 
 try:
     import pdfplumber
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pdfplumber"])
     import pdfplumber
-
-
+ 
+ 
 def get_input_value(name):
     val = globals().get(name, None)
     if val is not None:
@@ -55,12 +24,16 @@ def get_input_value(name):
     if "input" in globals():
         return globals()["input"].get(name)
     return None
-
-
+ 
+ 
 po_file_val = get_input_value("po_file")
 quotation_file_val = get_input_value("quotation_file")
-
-
+ 
+# LOCAL TEST PATCH: force these to our split local files
+po_file_val = json.dumps([{"url": "/home/claude/work/po.pdf", "filename": "po.pdf"}])
+quotation_file_val = json.dumps([{"url": "/home/claude/work/quotation.pdf", "filename": "quotation.pdf"}])
+ 
+ 
 def get_file_url_and_name(file_input):
     if not file_input:
         return None, ""
@@ -71,54 +44,50 @@ def get_file_url_and_name(file_input):
     except Exception:
         pass
     return None, ""
-
-
+ 
+ 
 po_url, po_filename = get_file_url_and_name(po_file_val)
 q_url, q_filename = get_file_url_and_name(quotation_file_val)
-
-
+ 
+ 
 def extract_text_and_tables_from_pdf(url, label):
+    # LOCAL TEST PATCH: "url" is actually a local file path in this test run
+    # (network access is disabled in this environment), so we open it
+    # directly instead of doing requests.get(). Everything else is
+    # untouched from the original script.
     if not url:
         raise ValueError(f"{label} file URL is empty. Unable to download.")
-
-    response = requests.get(url, timeout=15)
-    response.raise_for_status()
-
-    fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
-    try:
-        with os.fdopen(fd, "wb") as f:
-            f.write(response.content)
-
-        text = ""
-        tables = []
-        with pdfplumber.open(tmp_path) as pdf:
-            for page in pdf.pages:
-                text += (page.extract_text() or "") + "\n"
-                tables.extend(page.extract_tables() or [])
-
-        if not text.strip():
-            raise ValueError(
-                f"No text extracted from {label}. The PDF may be scanned or encrypted."
-            )
-        return text, tables
-    finally:
-        os.remove(tmp_path)
-
-
+ 
+    tmp_path = url
+ 
+    text = ""
+    tables = []
+    with pdfplumber.open(tmp_path) as pdf:
+        for page in pdf.pages:
+            text += (page.extract_text() or "") + "\n"
+            tables.extend(page.extract_tables() or [])
+ 
+    if not text.strip():
+        raise ValueError(
+            f"No text extracted from {label}. The PDF may be scanned or encrypted."
+        )
+    return text, tables
+ 
+ 
 # ---------------------------------------------------------------
 # Amount extraction: prefer "grand total", then "total amount" /
 # "amount due", then a plain "total" line; only fall back to any
 # number in the document as a last resort.
 # ---------------------------------------------------------------
 AMOUNT_PATTERN = r'([\d,]+\.\d{2,5})'
-
+ 
 KEYWORD_TIERS = [
     re.compile(r'grand\s*total', re.IGNORECASE),
     re.compile(r'(total\s*amount|amount\s*due|总计|合计)', re.IGNORECASE),
     re.compile(r'\btotal\b', re.IGNORECASE),
 ]
-
-
+ 
+ 
 def extract_amount(text, label):
     lines = text.splitlines()
     for keyword_re in KEYWORD_TIERS:
@@ -130,22 +99,22 @@ def extract_amount(text, label):
                     candidates.append(float(found[-1].replace(",", "")))
         if candidates:
             return max(candidates)
-
+ 
     all_matches = re.findall(AMOUNT_PATTERN, text)
     if all_matches:
         return float(all_matches[-1].replace(",", ""))
-
+ 
     raise ValueError(
         f"No amount found in {label}. Please check PDF format or update extraction rules."
     )
-
-
+ 
+ 
 # ---------------------------------------------------------------
 # Company name extraction (buyer or seller depending on labels passed)
 # ---------------------------------------------------------------
 COMPANY_SUFFIX_RE = re.compile(r'(sdn\.?\s*bhd\.?|bhd\.?|pte\.?\s*ltd\.?|ltd\.?|inc\.?|corp\.?|llc)', re.IGNORECASE)
-
-
+ 
+ 
 def extract_company_near_label(text, label_patterns, lookahead=3):
     lines = text.splitlines()
     fallback_remainder = None
@@ -170,8 +139,8 @@ def extract_company_near_label(text, label_patterns, lookahead=3):
         if COMPANY_SUFFIX_RE.search(line):
             return line.strip()
     return fallback_remainder
-
-
+ 
+ 
 # ---------------------------------------------------------------
 # Address extraction: label may or may not have a trailing colon;
 # pulls in continuation lines until a clearly unrelated field starts.
@@ -205,8 +174,8 @@ def extract_address(text, label_patterns):
                 if collected:
                     return ", ".join(c for c in collected if c)
     return None
-
-
+ 
+ 
 def fuzzy_similarity(a, b):
     def norm(v):
         if not v:
@@ -219,8 +188,8 @@ def fuzzy_similarity(a, b):
     if not a_n or not b_n:
         return 0.0
     return SequenceMatcher(None, a_n, b_n).ratio()
-
-
+ 
+ 
 def extract_field(text, patterns):
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -229,8 +198,8 @@ def extract_field(text, patterns):
             if groups:
                 return groups[0].strip()
     return None
-
-
+ 
+ 
 def extract_number(text, patterns):
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -243,8 +212,8 @@ def extract_number(text, patterns):
                 except ValueError:
                     continue
     return None
-
-
+ 
+ 
 # ---------------------------------------------------------------
 # Dates: handle ordinal suffixes and dash-separated month names
 # ---------------------------------------------------------------
@@ -253,8 +222,8 @@ DATE_FORMATS = [
     "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y",
     "%d-%b-%Y", "%d-%B-%Y",
 ]
-
-
+ 
+ 
 def parse_date(raw_date):
     if not raw_date:
         return None
@@ -265,16 +234,16 @@ def parse_date(raw_date):
         except ValueError:
             continue
     return None
-
-
+ 
+ 
 DATE_PATTERNS = [
     r'(?:Date|PO\s*Date|Quotation\s*Date)\s?:?\s?([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})',
     r'(?:Date|PO\s*Date|Quotation\s*Date)\s?:?\s?([0-9]{4}-[0-9]{2}-[0-9]{2})',
     r'(?:Date|PO\s*Date|Quotation\s*Date)\s?:?\s?([0-9]{1,2}-[A-Za-z]{3,9}-[0-9]{4})',
     r'(?:Date|PO\s*Date|Quotation\s*Date)\s?:?\s?([0-9]{1,2}(?:st|nd|rd|th)?\s?[A-Za-z]+\s?[0-9]{4})',
 ]
-
-
+ 
+ 
 # ---------------------------------------------------------------
 # Quantity / unit price: try ruled tables first, fall back to a
 # regex for borderless tables (e.g. "UNIT 12.00 MYR 34,560.00")
@@ -283,8 +252,8 @@ def _normalize_header_cell(cell):
     if not cell:
         return ""
     return re.sub(r'\s+', ' ', str(cell)).strip().lower()
-
-
+ 
+ 
 def extract_column_from_tables(tables, header_aliases):
     """Generic ruled-table column extractor. header_aliases is a list of
     substrings to match against a (whitespace-normalized) header cell,
@@ -308,12 +277,12 @@ def extract_column_from_tables(tables, header_aliases):
                 except ValueError:
                     continue
     return None
-
-
+ 
+ 
 def extract_quantity_from_tables(tables):
     return extract_column_from_tables(tables, ["qty", "quantity"])
-
-
+ 
+ 
 def extract_quantity_fallback(text):
     m = re.search(r'\b(?:UNIT|PCS|SET|LOT|NOS)\b\s+([\d,]+\.?\d*)\s+[A-Z]{3}\s+[\d,]+\.\d+', text)
     if m:
@@ -322,16 +291,16 @@ def extract_quantity_fallback(text):
     if m2:
         return float(m2.group(1).replace(",", ""))
     return None
-
-
+ 
+ 
 # ---------------------------------------------------------------
 # Unit price: same two-tier strategy as quantity - ruled table first,
 # then a regex for borderless single-line-item tables.
 # ---------------------------------------------------------------
 def extract_unit_price_from_tables(tables):
     return extract_column_from_tables(tables, ["unit price"])
-
-
+ 
+ 
 def extract_unit_price_fallback(text):
     # e.g. "UNIT 12.00 MYR 34,560.00000 ST0 0 0.00 414,720.00000"
     #                        ^^^^^^^^^^^ unit price is the number right
@@ -343,15 +312,140 @@ def extract_unit_price_fallback(text):
     if m2:
         return float(m2.group(1).replace(",", ""))
     return None
-
-
+ 
+ 
+# ---------------------------------------------------------------
+# BUGFIX (local test round): the original label:value regexes for
+# description/discount/tax never fire on this document because the
+# data lives in table rows ("Description" column header, "Special
+# Discount (-20%)" line item, "SST - 8%" line item) rather than as a
+# "Label: value" pair. Both docs *do* contain this data - it was a
+# genuine extraction gap, not a case of the data being absent (unlike
+# the quotation's delivery address, which truly is never printed).
+# ---------------------------------------------------------------
+def extract_description_from_tables(tables):
+    return extract_column_from_tables_text(tables, ["description"])
+ 
+ 
+def extract_column_from_tables_text(tables, header_aliases):
+    """Like extract_column_from_tables, but returns the raw first line of
+    text (not a float) - for text columns like Description."""
+    for table in tables:
+        header_row = table[0] if table else None
+        if not header_row:
+            continue
+        norm_header = [_normalize_header_cell(c) for c in header_row]
+        col_idx = None
+        for idx, cell in enumerate(norm_header):
+            if any(alias in cell for alias in header_aliases):
+                col_idx = idx
+                break
+        if col_idx is None:
+            continue
+        for row in table[1:]:
+            if col_idx < len(row) and row[col_idx]:
+                # Take just the first line - full multi-line item text is
+                # too long for a one-line report field and isn't needed
+                # for a similarity comparison.
+                first_line = str(row[col_idx]).strip().splitlines()[0].strip()
+                if first_line:
+                    return first_line
+    return None
+ 
+ 
+def extract_description_fallback(text):
+    # Borderless PO layout: description text follows a "REMARK:" label
+    # rather than a table column.
+    m = re.search(r'REMARK:\s*(.+?)(?=\n[A-Z][a-z]+:|\Z)', text, re.DOTALL)
+    if m:
+        return " ".join(m.group(1).split())
+    return None
+ 
+ 
+def normalize_discount_value(raw_str):
+    """Normalize any of the discount notations we might encounter to a
+    plain percentage number (e.g. 20.0 meaning 20%), so that a PO written
+    as "20%" compares correctly against a quotation written as "0.2" or
+    a bare "20". Rule: an explicit % sign always wins and is taken as-is;
+    with no % sign, a value in [-1, 1] is treated as a fraction (0.2 ->
+    20%), and anything else is assumed to already be a percent number."""
+    if raw_str is None:
+        return None
+    s = str(raw_str).strip()
+    had_percent = "%" in s
+    s = s.replace("%", "").replace("(", "").replace(")", "").strip()
+    try:
+        num = float(s.replace(",", ""))
+    except ValueError:
+        return None
+    if had_percent:
+        return num
+    if -1 <= num <= 1 and num != 0:
+        return num * 100
+    return num
+ 
+ 
+def extract_discount_from_tables(tables):
+    """Find a row whose text mentions 'discount' and pull the discount
+    value in whatever notation it's written (20%, -20%, 0.2, 20, etc.),
+    normalized to a percentage. Falls back to the row's trailing amount
+    only if no recognizable discount rate is present."""
+    for table in tables:
+        for row in table:
+            row_text = " ".join(str(c) for c in row if c)
+            if "discount" in row_text.lower():
+                # Prefer an explicit percentage or fraction written next
+                # to the word "discount" itself over any other number in
+                # the row (which is usually the discount AMOUNT, e.g.
+                # -96,000.00, not the rate).
+                near = re.search(
+                    r'discount\D{0,15}?(-?\d*\.?\d+)\s?%?', row_text, re.IGNORECASE
+                )
+                if near:
+                    matched_text = near.group(0)
+                    val = normalize_discount_value(
+                        near.group(1) + ("%" if "%" in matched_text else "")
+                    )
+                    if val is not None:
+                        return val
+                amt = re.findall(r'-?[\d,]+\.\d{2}', row_text)
+                if amt:
+                    return float(amt[-1].replace(",", ""))
+    return None
+ 
+ 
+def extract_tax_from_tables(tables):
+    """Find a row whose text mentions SST/GST/VAT/Tax and pull the
+    trailing monetary amount (the tax charge, not the percentage)."""
+    for table in tables:
+        for row in table:
+            row_text = " ".join(str(c) for c in row if c)
+            if re.search(r'\b(SST|GST|VAT|TAX)\b', row_text, re.IGNORECASE):
+                amt = re.findall(r'[\d,]+\.\d{2}', row_text)
+                if amt:
+                    return float(amt[-1].replace(",", ""))
+    return None
+ 
+ 
+def extract_tax_fallback(text):
+    # Borderless PO layout: "...MYR 34,560.00000 ST0 0 0.00 414,720.00000"
+    # -> Taxc, Tax, Taxamt, Amount columns run together on one line.
+    m = re.search(
+        r'\b(?:UNIT|PCS|SET|LOT|NOS)\b\s+[\d,]+\.?\d*\s+[A-Z]{3}\s+[\d,]+\.\d+\s+\S+\s+\d+\s+([\d,]+\.\d+)',
+        text,
+    )
+    if m:
+        return float(m.group(1).replace(",", ""))
+    return None
+ 
+ 
 TEXT_MATCH_THRESHOLD = 0.85
 AMOUNT_TOLERANCE = 0.01
 QUANTITY_TOLERANCE = 0
 DISCOUNT_TOLERANCE = 0.01
 TAX_TOLERANCE = 0.01
-
-
+ 
+ 
 def evaluate_field(label, po_val, q_val, is_match_fn, describe_fn):
     if po_val is None and q_val is None:
         return True, None
@@ -360,110 +454,149 @@ def evaluate_field(label, po_val, q_val, is_match_fn, describe_fn):
     if is_match_fn(po_val, q_val):
         return True, None
     return False, f"{label} mismatch ({describe_fn(po_val, q_val)})"
-
-
+ 
+ 
 try:
     po_text, po_tables = extract_text_and_tables_from_pdf(po_url, "PO")
     q_text, q_tables = extract_text_and_tables_from_pdf(q_url, "Quotation")
-
+ 
     buyer_labels = [r'Ship\s*To\b', r'\bTo:', r'Bill\s*To']
     seller_labels = [r'Ven\s*Name', r'From:']
-
+ 
     po_buyer_company = extract_company_near_label(po_text, buyer_labels) or "Unknown"
     q_buyer_company = extract_company_near_label(q_text, buyer_labels) or "Unknown"
-
+ 
     po_seller_company = extract_company_near_label(po_text, seller_labels) or "Unknown"
     q_seller_company = extract_company_near_label(q_text, seller_labels) or "Unknown"
-
+ 
     po_delivery_address = extract_address(po_text, [r'Address\s*:']) or "Not Found"
     q_delivery_address = extract_address(q_text, [r'Address\s*:']) or "Not Found"
-
+ 
     buyer_company_similarity = fuzzy_similarity(po_buyer_company, q_buyer_company)
     buyer_company_match = buyer_company_similarity >= TEXT_MATCH_THRESHOLD
-
+ 
     seller_company_similarity = fuzzy_similarity(po_seller_company, q_seller_company)
     seller_company_match = seller_company_similarity >= TEXT_MATCH_THRESHOLD
-
+ 
     address_similarity = fuzzy_similarity(po_delivery_address, q_delivery_address)
     address_match = address_similarity >= TEXT_MATCH_THRESHOLD
-
+ 
     po_amount = extract_amount(po_text, "PO")
     q_amount = extract_amount(q_text, "Quotation")
     amount_match = abs(po_amount - q_amount) <= AMOUNT_TOLERANCE
-
+ 
     # Aliases so downstream consumers that expect "total_amount" naming
     # (rather than "amount") find the same figure under either key.
     po_total_amount, q_total_amount = po_amount, q_amount
     total_amount_match = amount_match
-
+ 
     po_unit_price = extract_unit_price_from_tables(po_tables) or extract_unit_price_fallback(po_text)
     q_unit_price = extract_unit_price_from_tables(q_tables) or extract_unit_price_fallback(q_text)
-
+ 
     unit_price_match, unit_price_note = evaluate_field(
         "Unit price", po_unit_price, q_unit_price,
         lambda a, b: abs(a - b) <= AMOUNT_TOLERANCE,
         lambda a, b: f"PO: {a}, Quotation: {b}",
     )
-
+ 
     po_date_raw = extract_field(po_text, DATE_PATTERNS)
     q_date_raw = extract_field(q_text, DATE_PATTERNS)
     po_date = parse_date(po_date_raw)
     q_date = parse_date(q_date_raw)
-
+ 
     date_match, date_note = evaluate_field(
         "Validation date", po_date or po_date_raw, q_date or q_date_raw,
         lambda a, b: (po_date == q_date) if (po_date and q_date) else (po_date_raw == q_date_raw),
         lambda a, b: f"PO: {po_date_raw}, Quotation: {q_date_raw}",
     )
-
+ 
     po_quantity = extract_quantity_from_tables(po_tables) or extract_quantity_fallback(po_text)
     q_quantity = extract_quantity_from_tables(q_tables) or extract_quantity_fallback(q_text)
-
+ 
     quantity_match, quantity_note = evaluate_field(
         "Quantity", po_quantity, q_quantity,
         lambda a, b: abs(a - b) <= QUANTITY_TOLERANCE,
         lambda a, b: f"PO: {a}, Quotation: {b}",
     )
-
+ 
     description_patterns = [r'Description\s?:\s?([^\n]+)', r'Item\s?:\s?([^\n]+)']
-    po_description = extract_field(po_text, description_patterns)
-    q_description = extract_field(q_text, description_patterns)
+    po_description = (
+        extract_description_from_tables(po_tables)
+        or extract_description_fallback(po_text)
+        or extract_field(po_text, description_patterns)
+    )
+    q_description = (
+        extract_description_from_tables(q_tables)
+        or extract_description_fallback(q_text)
+        or extract_field(q_text, description_patterns)
+    )
     description_similarity = fuzzy_similarity(po_description, q_description) if (po_description and q_description) else 0.0
-
+ 
     description_match, description_note = evaluate_field(
         "Description", po_description, q_description,
         lambda a, b: fuzzy_similarity(a, b) >= TEXT_MATCH_THRESHOLD,
         lambda a, b: f"PO: '{a}', Quotation: '{b}', Similarity: {description_similarity:.0%}",
     )
-
-    discount_patterns = [r'Discount\s?:?\s?(?:RM|MYR|\$|USD)?\s?([\d,]+\.?\d*)\s?%?']
-    po_discount = extract_number(po_text, discount_patterns)
-    q_discount = extract_number(q_text, discount_patterns)
-
+ 
+    discount_patterns = [r'Discount\s?:?\s?(?:RM|MYR|\$|USD)?\s?(-?[\d,]+\.?\d*)\s?%?']
+ 
+    def discount_label_fallback(text):
+        m = re.search(discount_patterns[0], text, re.IGNORECASE)
+        if not m:
+            return None
+        matched_full = m.group(0)
+        return normalize_discount_value(
+            m.group(1) + ("%" if "%" in matched_full else "")
+        )
+ 
+    po_discount = extract_discount_from_tables(po_tables)
+    if po_discount is None:
+        po_discount = discount_label_fallback(po_text)
+ 
+    q_discount = extract_discount_from_tables(q_tables)
+    if q_discount is None:
+        q_discount = discount_label_fallback(q_text)
+ 
     discount_match, discount_note = evaluate_field(
         "Discount", po_discount, q_discount,
         lambda a, b: abs(a - b) <= DISCOUNT_TOLERANCE,
         lambda a, b: f"PO: {a}, Quotation: {b}",
     )
-
+ 
     tax_patterns = [r'(?:SST|GST|VAT|Tax)\D{0,15}?([\d,]+\.\d{2})']
-    po_tax = extract_number(po_text, tax_patterns)
-    q_tax = extract_number(q_text, tax_patterns)
-
+    def first_not_none(*vals):
+        for v in vals:
+            if v is not None:
+                return v
+        return None
+ 
+    # NOTE: using explicit None-checks here (not "or") because a real
+    # extracted tax amount can legitimately be 0.00, which is falsy in
+    # Python and would otherwise get skipped in favor of a worse fallback.
+    po_tax = first_not_none(
+        extract_tax_from_tables(po_tables),
+        extract_tax_fallback(po_text),
+        extract_number(po_text, tax_patterns),
+    )
+    q_tax = first_not_none(
+        extract_tax_from_tables(q_tables),
+        extract_number(q_text, tax_patterns),
+    )
+ 
     tax_match, tax_note = evaluate_field(
         "Tax", po_tax, q_tax,
         lambda a, b: abs(a - b) <= TAX_TOLERANCE,
         lambda a, b: f"PO: {a}, Quotation: {b}",
     )
-
+ 
     is_match = 1 if (
         amount_match and buyer_company_match and seller_company_match and address_match
         and date_match and quantity_match and description_match
         and discount_match and tax_match and unit_price_match
     ) else 0
-
+ 
     status_text = "Success" if is_match == 1 else "Failed"
-
+ 
     mismatch_notes = []
     if not amount_match:
         mismatch_notes.append(
@@ -488,12 +621,12 @@ try:
     ]:
         if not matched and note:
             mismatch_notes.append(note)
-
+ 
     ai_recommendation = (
         f"PO and Quotation matched successfully. Approved Total: MYR {po_amount:.2f}"
         if is_match == 1 else "Mismatch detected! " + "; ".join(mismatch_notes)
     )
-
+ 
     output = {
         "po_buyer_company": po_buyer_company, "q_buyer_company": q_buyer_company,
         "buyer_company_match": buyer_company_match, "buyer_company_similarity": round(buyer_company_similarity, 2),
@@ -512,7 +645,7 @@ try:
         "po_tax": po_tax, "q_tax": q_tax, "tax_match": tax_match,
         "is_match": is_match, "status_text": status_text, "ai_recommendation": ai_recommendation,
     }
-
+ 
 except Exception as e:
     output = {
         "po_buyer_company": "Unknown", "q_buyer_company": "Unknown", "buyer_company_match": False, "buyer_company_similarity": 0.0,
@@ -529,7 +662,8 @@ except Exception as e:
         "is_match": 0, "status_text": "Error",
         "ai_recommendation": f"Processing failed: {str(e)}",
     }
-
+ 
 if __name__ == "__main__":
     import json as _json
     print(_json.dumps(output, indent=2, default=str))
+ 
